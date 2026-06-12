@@ -253,7 +253,7 @@ Two tools were run against `workout_tracker.py`.
 
 Pylint reads the code without running it and flags potential problems: missing docstrings, bad naming, logic smells, and style violations. Scores out of 10.
 
-![Pylint result](./assets/pylint_result.png)
+![Pylint result](./pylint_result.png)
 
 **Score: 9.91/10.** Three warnings were raised, all on data model constructors — a known false positive for this pattern:
 
@@ -269,7 +269,7 @@ All three would be silenced with `max-args = 10` and `max-attributes = 10` in a 
 
 Mypy checks that the type annotations throughout the code are consistent — for example, that a function declared to return `str` never returns `None`, or that a method expecting a `float` isn't called with a `str`.
 
-![Mypy result](./assets/mypy_check.png)
+![Mypy result](./mypy_check.png)
 
 Clean pass. All `Optional[float]`, `Optional[str]`, `list[str]`, and return type annotations across every class were verified as correct and consistent.
 
