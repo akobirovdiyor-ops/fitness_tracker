@@ -1,0 +1,9 @@
+# Data
+workouts.json
+ 
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pycache
