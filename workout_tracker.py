@@ -1,3 +1,5 @@
+"""Fitness Tracker core OOP module: exercises, profiles, sessions, and log persistence."""
+# pylint: disable=too-many-lines
 from __future__ import annotations
 
 import copy
@@ -11,12 +13,16 @@ from typing import Optional
 
 
 class FitnessLevel(str, Enum):
+    """Fitness experience levels."""
+
     BEGINNER     = "beginner"
     INTERMEDIATE = "intermediate"
     ADVANCED     = "advanced"
 
 
 class FitnessGoal(str, Enum):
+    """User fitness goals."""
+
     STRENGTH    = "strength"
     WEIGHT_LOSS = "weight_loss"
     ENDURANCE   = "endurance"
@@ -24,6 +30,8 @@ class FitnessGoal(str, Enum):
 
 
 class WorkoutType(str, Enum):
+    """Workout category types."""
+
     HOME      = "home"
     SPLIT     = "split"
     FULL_BODY = "full_body"
@@ -31,6 +39,8 @@ class WorkoutType(str, Enum):
 
 
 class Equipment(str, Enum):
+    """Available equipment types."""
+
     BODYWEIGHT      = "bodyweight"
     DUMBBELL        = "dumbbell"
     BARBELL         = "barbell"
@@ -42,6 +52,8 @@ class Equipment(str, Enum):
 
 
 class MuscleGroup(str, Enum):
+    """Primary muscle group categories."""
+
     CHEST     = "chest"
     BACK      = "back"
     SHOULDERS = "shoulders"
@@ -55,7 +67,12 @@ class MuscleGroup(str, Enum):
 
 
 class Exercise(ABC):
-    def __init__(self, name: str, muscle_group: str, notes: str = "", _id: Optional[str] = None) -> None:
+    """Abstract base class for all exercise types."""
+
+    def __init__(
+        self, name: str, muscle_group: str, notes: str = "", _id: Optional[str] = None
+    ) -> None:
+        """Initialise shared exercise fields."""
         self._id          = _id or str(uuid.uuid4())
         self.name         = name
         self.muscle_group = muscle_group
@@ -63,14 +80,17 @@ class Exercise(ABC):
 
     @property
     def id(self) -> str:
+        """Return unique exercise id."""
         return self._id
 
     @property
     def name(self) -> str:
+        """Return exercise name."""
         return self._name
 
     @name.setter
     def name(self, value: str) -> None:
+        """Set and validate exercise name."""
         value = value.strip()
         if not value:
             raise ValueError("Exercise name cannot be empty.")
@@ -78,10 +98,12 @@ class Exercise(ABC):
 
     @property
     def muscle_group(self) -> str:
+        """Return primary muscle group."""
         return self._muscle_group
 
     @muscle_group.setter
     def muscle_group(self, value: str) -> None:
+        """Set and validate muscle group."""
         value = value.strip()
         if not value:
             raise ValueError("Muscle group cannot be empty.")
@@ -89,36 +111,53 @@ class Exercise(ABC):
 
     @property
     def notes(self) -> str:
+        """Return coaching notes."""
         return self._notes
 
     @notes.setter
     def notes(self, value: str) -> None:
+        """Set notes, stripping whitespace."""
         self._notes = value.strip()
 
     @abstractmethod
-    def get_type(self) -> str: ...
+    def get_type(self) -> str:
+        """Return a string identifying the concrete exercise type."""
 
     @abstractmethod
-    def get_extra_fields(self) -> dict: ...
+    def get_extra_fields(self) -> dict:
+        """Return type-specific fields for serialisation."""
 
     def to_dict(self) -> dict:
-        base = {"id": self._id, "type": self.get_type(), "name": self._name,
-                "muscle_group": self._muscle_group, "notes": self._notes}
+        """Serialise the exercise to a plain dictionary."""
+        base = {
+            "id": self._id, "type": self.get_type(),
+            "name": self._name, "muscle_group": self._muscle_group, "notes": self._notes,
+        }
         base.update(self.get_extra_fields())
         return base
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}(id={self._id!r}, name={self._name!r}, muscle_group={self._muscle_group!r})"
+        """Return developer-friendly string."""
+        return (
+            f"{self.__class__.__name__}(id={self._id!r}, "
+            f"name={self._name!r}, muscle_group={self._muscle_group!r})"
+        )
 
     def __eq__(self, other: object) -> bool:
+        """Compare exercises by id."""
         if not isinstance(other, Exercise):
             return NotImplemented
         return self._id == other._id
 
 
 class StrengthExercise(Exercise):
-    def __init__(self, name: str, muscle_group: str, sets: int, reps: int,
-                 weight_kg: float, notes: str = "", _id: Optional[str] = None) -> None:
+    """A weight-training exercise defined by sets, reps, and weight."""
+
+    def __init__(
+        self, name: str, muscle_group: str, sets: int, reps: int,
+        weight_kg: float, notes: str = "", _id: Optional[str] = None,
+    ) -> None:
+        """Initialise strength exercise with sets, reps, and weight."""
         super().__init__(name, muscle_group, notes, _id)
         self.sets      = sets
         self.reps      = reps
@@ -126,10 +165,12 @@ class StrengthExercise(Exercise):
 
     @property
     def sets(self) -> int:
+        """Return number of sets."""
         return self._sets
 
     @sets.setter
     def sets(self, value: int) -> None:
+        """Set and validate number of sets."""
         value = int(value)
         if value < 1:
             raise ValueError("Sets must be at least 1.")
@@ -137,10 +178,12 @@ class StrengthExercise(Exercise):
 
     @property
     def reps(self) -> int:
+        """Return number of reps."""
         return self._reps
 
     @reps.setter
     def reps(self, value: int) -> None:
+        """Set and validate number of reps."""
         value = int(value)
         if value < 1:
             raise ValueError("Reps must be at least 1.")
@@ -148,38 +191,50 @@ class StrengthExercise(Exercise):
 
     @property
     def weight_kg(self) -> float:
+        """Return weight in kilograms."""
         return self._weight_kg
 
     @weight_kg.setter
     def weight_kg(self, value: float) -> None:
+        """Set and validate weight in kilograms."""
         value = float(value)
         if value < 0:
             raise ValueError("Weight cannot be negative.")
         self._weight_kg = round(value, 2)
 
     def get_type(self) -> str:
+        """Return exercise type identifier."""
         return "strength"
 
     def get_extra_fields(self) -> dict:
+        """Return sets, reps, and weight for serialisation."""
         return {"sets": self._sets, "reps": self._reps, "weight_kg": self._weight_kg}
 
     def total_volume(self) -> float:
+        """Return total volume lifted: sets × reps × weight_kg."""
         return self._sets * self._reps * self._weight_kg
 
 
 class CardioExercise(Exercise):
-    def __init__(self, name: str, muscle_group: str, duration_min: float,
-                 distance_km: float = 0.0, notes: str = "", _id: Optional[str] = None) -> None:
+    """A cardiovascular exercise defined by duration and optional distance."""
+
+    def __init__(
+        self, name: str, muscle_group: str, duration_min: float,
+        distance_km: float = 0.0, notes: str = "", _id: Optional[str] = None,
+    ) -> None:
+        """Initialise cardio exercise with duration and optional distance."""
         super().__init__(name, muscle_group, notes, _id)
         self.duration_min = duration_min
         self.distance_km  = distance_km
 
     @property
     def duration_min(self) -> float:
+        """Return duration in minutes."""
         return self._duration_min
 
     @duration_min.setter
     def duration_min(self, value: float) -> None:
+        """Set and validate duration in minutes."""
         value = float(value)
         if value <= 0:
             raise ValueError("Duration must be greater than 0.")
@@ -187,28 +242,34 @@ class CardioExercise(Exercise):
 
     @property
     def distance_km(self) -> float:
+        """Return distance in kilometres."""
         return self._distance_km
 
     @distance_km.setter
     def distance_km(self, value: float) -> None:
+        """Set and validate distance in kilometres."""
         value = float(value)
         if value < 0:
             raise ValueError("Distance cannot be negative.")
         self._distance_km = round(value, 2)
 
     def get_type(self) -> str:
+        """Return exercise type identifier."""
         return "cardio"
 
     def get_extra_fields(self) -> dict:
+        """Return duration and distance for serialisation."""
         return {"duration_min": self._duration_min, "distance_km": self._distance_km}
 
     def pace_min_per_km(self) -> Optional[float]:
+        """Return pace in min/km, or None if distance is 0."""
         if self._distance_km == 0:
             return None
         return round(self._duration_min / self._distance_km, 2)
 
 
 def exercise_from_dict(data: dict) -> Exercise:
+    """Reconstruct an Exercise object from a serialised dictionary."""
     ex_type = data.get("type")
     if ex_type == "strength":
         return StrengthExercise(
@@ -226,49 +287,64 @@ def exercise_from_dict(data: dict) -> Exercise:
 
 
 class WeightEntry:
+    """A single body-weight measurement on a given date."""
+
     def __init__(self, weight_kg: float, entry_date: Optional[str] = None) -> None:
+        """Initialise weight entry with optional date (defaults to today)."""
         self.weight_kg  = weight_kg
         self.entry_date = entry_date or date.today().isoformat()
 
     @property
     def weight_kg(self) -> float:
+        """Return body weight in kilograms."""
         return self._weight_kg
 
     @weight_kg.setter
     def weight_kg(self, value: float) -> None:
+        """Set and validate body weight (20–500 kg)."""
         value = float(value)
-        if not (20.0 <= value <= 500.0):
+        if not 20.0 <= value <= 500.0:
             raise ValueError("Body weight must be between 20 and 500 kg.")
         self._weight_kg = round(value, 1)
 
     @property
     def entry_date(self) -> str:
+        """Return measurement date as YYYY-MM-DD string."""
         return self._entry_date
 
     @entry_date.setter
     def entry_date(self, value: str) -> None:
+        """Set and validate date string in YYYY-MM-DD format."""
         try:
             datetime.strptime(value, "%Y-%m-%d")
-        except ValueError:
-            raise ValueError("entry_date must be in YYYY-MM-DD format.")
+        except ValueError as exc:
+            raise ValueError("entry_date must be in YYYY-MM-DD format.") from exc
         self._entry_date = value
 
     def to_dict(self) -> dict:
+        """Serialise weight entry to dict."""
         return {"weight_kg": self._weight_kg, "entry_date": self._entry_date}
 
     @classmethod
     def from_dict(cls, data: dict) -> "WeightEntry":
+        """Reconstruct a WeightEntry from a dict."""
         return cls(weight_kg=data["weight_kg"], entry_date=data.get("entry_date"))
 
     def __repr__(self) -> str:
+        """Return developer-friendly string."""
         return f"WeightEntry({self._weight_kg} kg on {self._entry_date})"
 
 
-class UserProfile:
-    def __init__(self, name: str, age: int, level: str, goal: str, equipment: list[str],
-                 workout_days: int = 3, weight_kg: Optional[float] = None,
-                 height_cm: Optional[float] = None, weight_history: Optional[list[dict]] = None,
-                 _id: Optional[str] = None) -> None:
+class UserProfile:  # pylint: disable=too-many-instance-attributes
+    """Stores a user's fitness characteristics used for workout generation."""
+
+    def __init__(  # pylint: disable=too-many-arguments,too-many-positional-arguments
+        self, name: str, age: int, level: str, goal: str, equipment: list[str],
+        workout_days: int = 3, weight_kg: Optional[float] = None,
+        height_cm: Optional[float] = None, weight_history: Optional[list[dict]] = None,
+        _id: Optional[str] = None,
+    ) -> None:
+        """Initialise user profile with fitness characteristics."""
         self._id          = _id or str(uuid.uuid4())
         self.name         = name
         self.age          = age
@@ -284,14 +360,17 @@ class UserProfile:
 
     @property
     def id(self) -> str:
+        """Return unique profile id."""
         return self._id
 
     @property
     def name(self) -> str:
+        """Return user display name."""
         return self._name
 
     @name.setter
     def name(self, value: str) -> None:
+        """Set and validate user name."""
         value = value.strip()
         if not value:
             raise ValueError("Name cannot be empty.")
@@ -299,122 +378,156 @@ class UserProfile:
 
     @property
     def age(self) -> int:
+        """Return user age in years."""
         return self._age
 
     @age.setter
     def age(self, value: int) -> None:
+        """Set and validate age (13–100)."""
         value = int(value)
-        if not (13 <= value <= 100):
+        if not 13 <= value <= 100:
             raise ValueError("Age must be between 13 and 100.")
         self._age = value
 
     @property
     def level(self) -> str:
+        """Return fitness level string."""
         return self._level
 
     @level.setter
     def level(self, value: str) -> None:
+        """Set and validate fitness level."""
         try:
             self._level = FitnessLevel(value).value
-        except ValueError:
-            raise ValueError(f"Invalid level '{value}'. Choose: " + ", ".join(l.value for l in FitnessLevel))
+        except ValueError as exc:
+            raise ValueError(
+                f"Invalid level '{value}'. Choose: "
+                + ", ".join(lv.value for lv in FitnessLevel)
+            ) from exc
 
     @property
     def goal(self) -> str:
+        """Return fitness goal string."""
         return self._goal
 
     @goal.setter
     def goal(self, value: str) -> None:
+        """Set and validate fitness goal."""
         try:
             self._goal = FitnessGoal(value).value
-        except ValueError:
-            raise ValueError(f"Invalid goal '{value}'. Choose: " + ", ".join(g.value for g in FitnessGoal))
+        except ValueError as exc:
+            raise ValueError(
+                f"Invalid goal '{value}'. Choose: "
+                + ", ".join(g.value for g in FitnessGoal)
+            ) from exc
 
     @property
     def equipment(self) -> list[str]:
+        """Return copy of available equipment list."""
         return list(self._equipment)
 
     @equipment.setter
     def equipment(self, value: list[str]) -> None:
+        """Set and validate equipment list."""
         validated = []
         for item in value:
             try:
                 validated.append(Equipment(item).value)
-            except ValueError:
-                raise ValueError(f"Invalid equipment '{item}'. Choose: " + ", ".join(e.value for e in Equipment))
+            except ValueError as exc:
+                raise ValueError(
+                    f"Invalid equipment '{item}'. Choose: "
+                    + ", ".join(e.value for e in Equipment)
+                ) from exc
         self._equipment = validated
 
     @property
     def workout_days(self) -> int:
+        """Return training days per week."""
         return self._workout_days
 
     @workout_days.setter
     def workout_days(self, value: int) -> None:
+        """Set and validate workout days (1–7)."""
         value = int(value)
-        if not (1 <= value <= 7):
+        if not 1 <= value <= 7:
             raise ValueError("Workout days must be between 1 and 7.")
         self._workout_days = value
 
     @property
     def weight_kg(self) -> Optional[float]:
+        """Return current body weight in kilograms, or None."""
         return self._weight_kg
 
     @weight_kg.setter
     def weight_kg(self, value: Optional[float]) -> None:
+        """Set and validate body weight (20–500 kg), or None."""
         if value is None:
             self._weight_kg = None
             return
         value = float(value)
-        if not (20.0 <= value <= 500.0):
+        if not 20.0 <= value <= 500.0:
             raise ValueError("Body weight must be between 20 and 500 kg.")
         self._weight_kg = round(value, 1)
 
     @property
     def height_cm(self) -> Optional[float]:
+        """Return height in centimetres, or None."""
         return self._height_cm
 
     @height_cm.setter
     def height_cm(self, value: Optional[float]) -> None:
+        """Set and validate height (100–250 cm), or None."""
         if value is None:
             self._height_cm = None
             return
         value = float(value)
-        if not (100.0 <= value <= 250.0):
+        if not 100.0 <= value <= 250.0:
             raise ValueError("Height must be between 100 and 250 cm.")
         self._height_cm = round(value, 1)
 
     def bmi(self) -> Optional[float]:
+        """Return BMI if both weight and height are set, otherwise None."""
         if self._weight_kg is None or self._height_cm is None:
             return None
         return round(self._weight_kg / (self._height_cm / 100) ** 2, 1)
 
     def bmi_category(self) -> Optional[str]:
-        b = self.bmi()
-        if b is None:    return None
-        if b < 18.5:     return "underweight"
-        if b < 25.0:     return "normal"
-        if b < 30.0:     return "overweight"
+        """Return BMI category string, or None if BMI cannot be calculated."""
+        bmi_val = self.bmi()
+        if bmi_val is None:
+            return None
+        if bmi_val < 18.5:
+            return "underweight"
+        if bmi_val < 25.0:
+            return "normal"
+        if bmi_val < 30.0:
+            return "overweight"
         return "obese"
 
     def log_weight(self, weight_kg: float, entry_date: Optional[str] = None) -> WeightEntry:
+        """Add a body-weight measurement and update current weight."""
         entry = WeightEntry(weight_kg=weight_kg, entry_date=entry_date)
         self._weight_history.append(entry)
         self._weight_kg = entry.weight_kg
         return entry
 
     def weight_history(self) -> list[WeightEntry]:
+        """Return weight entries sorted oldest to newest."""
         return sorted(self._weight_history, key=lambda e: e.entry_date)
 
     def weight_change(self) -> Optional[float]:
+        """Return total weight change (latest - earliest), or None if fewer than 2 entries."""
         history = self.weight_history()
         if len(history) < 2:
             return None
         return round(history[-1].weight_kg - history[0].weight_kg, 1)
 
     def has_equipment(self, eq: str) -> bool:
+        """Return True if the user has access to the given equipment."""
         return eq in self._equipment
 
     def to_dict(self) -> dict:
+        """Serialise user profile to dict."""
         return {
             "id": self._id, "name": self._name, "age": self._age,
             "level": self._level, "goal": self._goal, "equipment": self._equipment,
@@ -425,6 +538,7 @@ class UserProfile:
 
     @classmethod
     def from_dict(cls, data: dict) -> "UserProfile":
+        """Reconstruct a UserProfile from a dict."""
         return cls(
             name=data["name"], age=data["age"], level=data["level"], goal=data["goal"],
             equipment=data.get("equipment", []), workout_days=data.get("workout_days", 3),
@@ -433,13 +547,22 @@ class UserProfile:
         )
 
     def __repr__(self) -> str:
-        return f"UserProfile(name={self._name!r}, level={self._level!r}, goal={self._goal!r}, bmi={self.bmi()!r})"
+        """Return developer-friendly string."""
+        return (
+            f"UserProfile(name={self._name!r}, level={self._level!r}, "
+            f"goal={self._goal!r}, bmi={self.bmi()!r})"
+        )
 
 
 class ExerciseTemplate:
-    def __init__(self, name: str, muscle_group: str, exercise_type: str, equipment: str,
-                 workout_types: list[str], levels: list[str], default_sets: int = 3,
-                 default_reps: int = 10, default_duration_min: float = 20.0, description: str = "") -> None:
+    """A blueprint exercise that can be included in a generated workout plan."""
+
+    def __init__(  # pylint: disable=too-many-arguments,too-many-positional-arguments
+        self, name: str, muscle_group: str, exercise_type: str, equipment: str,
+        workout_types: list[str], levels: list[str], default_sets: int = 3,
+        default_reps: int = 10, default_duration_min: float = 20.0, description: str = "",
+    ) -> None:
+        """Initialise exercise template with suggested parameters."""
         self.name                 = name
         self.muscle_group         = muscle_group
         self.exercise_type        = exercise_type
@@ -452,19 +575,30 @@ class ExerciseTemplate:
         self.description          = description
 
     def fits(self, workout_type: str, level: str, user_equipment: list[str]) -> bool:
-        return workout_type in self.workout_types and level in self.levels and self.equipment in user_equipment
+        """Return True if this template suits the given workout type, level, and equipment."""
+        return (
+            workout_type in self.workout_types
+            and level in self.levels
+            and self.equipment in user_equipment
+        )
 
     def to_dict(self) -> dict:
+        """Serialise exercise template to dict."""
         return {
             "name": self.name, "muscle_group": self.muscle_group,
             "exercise_type": self.exercise_type, "equipment": self.equipment,
             "workout_types": self.workout_types, "levels": self.levels,
             "default_sets": self.default_sets, "default_reps": self.default_reps,
-            "default_duration_min": self.default_duration_min, "description": self.description,
+            "default_duration_min": self.default_duration_min,
+            "description": self.description,
         }
 
     def __repr__(self) -> str:
-        return f"ExerciseTemplate(name={self.name!r}, muscle={self.muscle_group!r}, eq={self.equipment!r})"
+        """Return developer-friendly string."""
+        return (
+            f"ExerciseTemplate(name={self.name!r}, "
+            f"muscle={self.muscle_group!r}, eq={self.equipment!r})"
+        )
 
 
 _BW  = Equipment.BODYWEIGHT.value
@@ -481,9 +615,9 @@ _INT = FitnessLevel.INTERMEDIATE.value
 _ADV = FitnessLevel.ADVANCED.value
 _ALL_LEVELS = [_BEG, _INT, _ADV]
 
-_HOME  = WorkoutType.HOME.value
-_SPLIT = WorkoutType.SPLIT.value
-_FULL  = WorkoutType.FULL_BODY.value
+_HOME   = WorkoutType.HOME.value
+_SPLIT  = WorkoutType.SPLIT.value
+_FULL   = WorkoutType.FULL_BODY.value
 _CARDIO = WorkoutType.CARDIO.value
 
 _CH = MuscleGroup.CHEST.value
@@ -499,6 +633,7 @@ _CA = MuscleGroup.CARDIO.value
 
 ET = ExerciseTemplate
 
+# pylint: disable=line-too-long
 EXERCISE_DATABASE: list[ExerciseTemplate] = [
     # CHEST
     ET("Barbell Bench Press",   _CH, "strength", _BB, [_SPLIT, _FULL], [_INT, _ADV], 4, 8,  description="Lie flat, grip just outside shoulder width, lower to chest and press up."),
@@ -514,82 +649,99 @@ EXERCISE_DATABASE: list[ExerciseTemplate] = [
     ET("Seated Cable Row",      _BA, "strength", _CB, [_SPLIT, _FULL], [_BEG, _INT], 3, 12, description="Sit upright, pull handle to abdomen, squeeze shoulder blades together."),
     ET("Resistance Band Row",   _BA, "strength", _RB, [_HOME, _FULL], [_BEG, _INT], 3, 15, description="Anchor band at waist height, pull elbows back and squeeze shoulder blades."),
     # SHOULDERS
-    ET("Barbell Overhead Press",   _SH, "strength", _BB, [_SPLIT, _FULL], [_INT, _ADV], 4, 6,  description="Press bar overhead from front rack, lock out arms, lower under control."),
-    ET("Dumbbell Lateral Raise",   _SH, "strength", _DB, [_SPLIT, _FULL, _HOME], _ALL_LEVELS, 3, 15, description="Slight bend in elbows, raise arms to shoulder height, lower slowly."),
-    ET("Dumbbell Shoulder Press",  _SH, "strength", _DB, [_SPLIT, _FULL, _HOME], _ALL_LEVELS, 3, 10, description="Press dumbbells from ear height to overhead, avoid arching lower back."),
-    ET("Face Pull",                _SH, "strength", _CB, [_SPLIT], _ALL_LEVELS, 3, 15, description="Pull rope to forehead level, flare elbows out, squeeze rear delts."),
-    ET("Pike Push-Up",             _SH, "strength", _BW, [_HOME, _SPLIT], [_BEG, _INT], 3, 10, description="Hips high in pike position, lower head between hands, press back up."),
+    ET("Barbell Overhead Press",  _SH, "strength", _BB, [_SPLIT, _FULL], [_INT, _ADV], 4, 6,  description="Press bar overhead from front rack, lock out arms, lower under control."),
+    ET("Dumbbell Lateral Raise",  _SH, "strength", _DB, [_SPLIT, _FULL, _HOME], _ALL_LEVELS, 3, 15, description="Slight bend in elbows, raise arms to shoulder height, lower slowly."),
+    ET("Dumbbell Shoulder Press", _SH, "strength", _DB, [_SPLIT, _FULL, _HOME], _ALL_LEVELS, 3, 10, description="Press dumbbells from ear height to overhead, avoid arching lower back."),
+    ET("Face Pull",               _SH, "strength", _CB, [_SPLIT], _ALL_LEVELS, 3, 15, description="Pull rope to forehead level, flare elbows out, squeeze rear delts."),
+    ET("Pike Push-Up",            _SH, "strength", _BW, [_HOME, _SPLIT], [_BEG, _INT], 3, 10, description="Hips high in pike position, lower head between hands, press back up."),
     # BICEPS
-    ET("Barbell Curl",          _BI, "strength", _BB, [_SPLIT], _ALL_LEVELS, 3, 12, description="Keep elbows fixed at sides, curl bar to shoulders, lower with control."),
-    ET("Dumbbell Hammer Curl",  _BI, "strength", _DB, [_SPLIT, _HOME], _ALL_LEVELS, 3, 12, description="Neutral grip (thumbs up), curl to shoulder height, squeeze at top."),
-    ET("Cable Curl",            _BI, "strength", _CB, [_SPLIT], _ALL_LEVELS, 3, 15, description="Constant cable tension throughout movement. Keep elbows stationary."),
-    ET("Resistance Band Curl",  _BI, "strength", _RB, [_HOME, _SPLIT], [_BEG, _INT], 3, 15, description="Stand on band, curl up to shoulder height, squeeze at the top."),
+    ET("Barbell Curl",         _BI, "strength", _BB, [_SPLIT], _ALL_LEVELS, 3, 12, description="Keep elbows fixed at sides, curl bar to shoulders, lower with control."),
+    ET("Dumbbell Hammer Curl", _BI, "strength", _DB, [_SPLIT, _HOME], _ALL_LEVELS, 3, 12, description="Neutral grip (thumbs up), curl to shoulder height, squeeze at top."),
+    ET("Cable Curl",           _BI, "strength", _CB, [_SPLIT], _ALL_LEVELS, 3, 15, description="Constant cable tension throughout movement. Keep elbows stationary."),
+    ET("Resistance Band Curl", _BI, "strength", _RB, [_HOME, _SPLIT], [_BEG, _INT], 3, 15, description="Stand on band, curl up to shoulder height, squeeze at the top."),
     # TRICEPS
-    ET("Triceps Dip",                       _TR, "strength", _BW, [_HOME, _SPLIT, _FULL], _ALL_LEVELS, 3, 12, description="Lower body between hands on a bench or chair, push back up."),
-    ET("Cable Triceps Pushdown",            _TR, "strength", _CB, [_SPLIT], _ALL_LEVELS, 3, 15, description="Keep elbows tucked at sides, push bar down to full extension."),
-    ET("Skull Crusher",                     _TR, "strength", _BB, [_SPLIT], [_INT, _ADV], 3, 10, description="Lower bar toward forehead by hinging at elbows only. Press back up."),
-    ET("Dumbbell Overhead Triceps Extension", _TR, "strength", _DB, [_SPLIT, _HOME], _ALL_LEVELS, 3, 12, description="Hold one dumbbell overhead with both hands, lower behind head, extend back up."),
+    ET("Triceps Dip",                        _TR, "strength", _BW, [_HOME, _SPLIT, _FULL], _ALL_LEVELS, 3, 12, description="Lower body between hands on a bench or chair, push back up."),
+    ET("Cable Triceps Pushdown",             _TR, "strength", _CB, [_SPLIT], _ALL_LEVELS, 3, 15, description="Keep elbows tucked at sides, push bar down to full extension."),
+    ET("Skull Crusher",                      _TR, "strength", _BB, [_SPLIT], [_INT, _ADV], 3, 10, description="Lower bar toward forehead by hinging at elbows only. Press back up."),
+    ET("Dumbbell Overhead Triceps Extension",_TR, "strength", _DB, [_SPLIT, _HOME], _ALL_LEVELS, 3, 12, description="Hold one dumbbell overhead with both hands, lower behind head, extend up."),
     # LEGS
-    ET("Barbell Back Squat",  _LE, "strength", _BB, [_SPLIT, _FULL], [_INT, _ADV], 4, 8,  description="Bar on upper traps, squat to parallel, drive through heels to stand."),
-    ET("Goblet Squat",        _LE, "strength", _DB, [_SPLIT, _FULL, _HOME], [_BEG, _INT], 3, 12, description="Hold dumbbell at chest, feet shoulder-width, squat deep, elbows inside knees."),
-    ET("Bodyweight Squat",    _LE, "strength", _BW, [_HOME, _FULL, _CARDIO], _ALL_LEVELS, 3, 20, description="Feet shoulder-width, chest up, squat until thighs parallel, stand tall."),
-    ET("Leg Press",           _LE, "strength", _MC, [_SPLIT, _FULL], _ALL_LEVELS, 4, 12, description="Feet mid-platform, press to near-full extension, lower under control."),
-    ET("Romanian Deadlift",   _LE, "strength", _BB, [_SPLIT, _FULL], [_INT, _ADV], 3, 10, description="Hinge at hips, soft knee bend, lower bar along shins, feel hamstring stretch."),
-    ET("Dumbbell Lunge",      _LE, "strength", _DB, [_SPLIT, _FULL, _HOME], _ALL_LEVELS, 3, 12, description="Step forward, lower back knee toward floor, push front foot to return."),
-    ET("Bodyweight Lunge",    _LE, "strength", _BW, [_HOME, _FULL], [_BEG, _INT], 3, 12, description="Alternate legs. Keep torso upright, front shin vertical at bottom."),
-    ET("Leg Curl Machine",    _LE, "strength", _MC, [_SPLIT], _ALL_LEVELS, 3, 12, description="Curl heels toward glutes, pause at top, lower slowly."),
-    ET("Kettlebell Swing",    _LE, "strength", _KB, [_FULL, _HOME, _CARDIO], [_INT, _ADV], 4, 15, description="Hip hinge power, not a squat. Drive hips forward, let arms swing to shoulder height."),
+    ET("Barbell Back Squat", _LE, "strength", _BB, [_SPLIT, _FULL], [_INT, _ADV], 4, 8,  description="Bar on upper traps, squat to parallel, drive through heels to stand."),
+    ET("Goblet Squat",       _LE, "strength", _DB, [_SPLIT, _FULL, _HOME], [_BEG, _INT], 3, 12, description="Hold dumbbell at chest, feet shoulder-width, squat deep, elbows inside knees."),
+    ET("Bodyweight Squat",   _LE, "strength", _BW, [_HOME, _FULL, _CARDIO], _ALL_LEVELS, 3, 20, description="Feet shoulder-width, chest up, squat until thighs parallel, stand tall."),
+    ET("Leg Press",          _LE, "strength", _MC, [_SPLIT, _FULL], _ALL_LEVELS, 4, 12, description="Feet mid-platform, press to near-full extension, lower under control."),
+    ET("Romanian Deadlift",  _LE, "strength", _BB, [_SPLIT, _FULL], [_INT, _ADV], 3, 10, description="Hinge at hips, soft knee bend, lower bar along shins, feel hamstring stretch."),
+    ET("Dumbbell Lunge",     _LE, "strength", _DB, [_SPLIT, _FULL, _HOME], _ALL_LEVELS, 3, 12, description="Step forward, lower back knee toward floor, push front foot to return."),
+    ET("Bodyweight Lunge",   _LE, "strength", _BW, [_HOME, _FULL], [_BEG, _INT], 3, 12, description="Alternate legs. Keep torso upright, front shin vertical at bottom."),
+    ET("Leg Curl Machine",   _LE, "strength", _MC, [_SPLIT], _ALL_LEVELS, 3, 12, description="Curl heels toward glutes, pause at top, lower slowly."),
+    ET("Kettlebell Swing",   _LE, "strength", _KB, [_FULL, _HOME, _CARDIO], [_INT, _ADV], 4, 15, description="Hip hinge power, not a squat. Drive hips forward, arms swing to shoulder height."),
     # GLUTES
-    ET("Hip Thrust",        _GL, "strength", _BB, [_SPLIT, _FULL], [_INT, _ADV], 4, 10, description="Upper back on bench, bar across hips, drive hips to full extension, squeeze glutes."),
+    ET("Hip Thrust",          _GL, "strength", _BB, [_SPLIT, _FULL], [_INT, _ADV], 4, 10, description="Upper back on bench, bar across hips, drive hips to full extension, squeeze glutes."),
     ET("Dumbbell Hip Thrust", _GL, "strength", _DB, [_SPLIT, _HOME], [_BEG, _INT], 3, 15, description="Place dumbbell on hips, drive up and squeeze glutes hard at top."),
-    ET("Glute Bridge",      _GL, "strength", _BW, [_HOME, _SPLIT, _FULL], _ALL_LEVELS, 3, 20, description="Lie on back, feet flat, push hips up and squeeze glutes at top."),
-    ET("Cable Kickback",    _GL, "strength", _CB, [_SPLIT], _ALL_LEVELS, 3, 15, description="Attach ankle cuff, hinge forward slightly, kick leg back and squeeze glute."),
+    ET("Glute Bridge",        _GL, "strength", _BW, [_HOME, _SPLIT, _FULL], _ALL_LEVELS, 3, 20, description="Lie on back, feet flat, push hips up and squeeze glutes at top."),
+    ET("Cable Kickback",      _GL, "strength", _CB, [_SPLIT], _ALL_LEVELS, 3, 15, description="Attach ankle cuff, hinge forward slightly, kick leg back and squeeze glute."),
     # CORE
-    ET("Plank",              _CO, "strength", _BW, [_HOME, _SPLIT, _FULL, _CARDIO], _ALL_LEVELS, 3, 1,  description="Hold position for 30–60 seconds. Keep hips level, brace core."),
-    ET("Hanging Leg Raise",  _CO, "strength", _BW, [_SPLIT, _FULL], [_INT, _ADV], 3, 12, description="Hang from bar, raise legs to hip height or higher, lower with control."),
-    ET("Cable Crunch",       _CO, "strength", _CB, [_SPLIT], _ALL_LEVELS, 3, 15, description="Kneel, hold rope at head, crunch elbows toward knees, control return."),
-    ET("Ab Wheel Rollout",   _CO, "strength", _BW, [_HOME, _SPLIT], [_INT, _ADV], 3, 10, description="Roll out slowly, brace core hard, pull back with lats and abs."),
-    ET("Mountain Climber",   _CO, "strength", _BW, [_HOME, _FULL, _CARDIO], _ALL_LEVELS, 3, 20, description="Plank position, alternate driving knees to chest, keep hips down."),
+    ET("Plank",             _CO, "strength", _BW, [_HOME, _SPLIT, _FULL, _CARDIO], _ALL_LEVELS, 3, 1,  description="Hold position for 30-60 seconds. Keep hips level, brace core."),
+    ET("Hanging Leg Raise", _CO, "strength", _BW, [_SPLIT, _FULL], [_INT, _ADV], 3, 12, description="Hang from bar, raise legs to hip height or higher, lower with control."),
+    ET("Cable Crunch",      _CO, "strength", _CB, [_SPLIT], _ALL_LEVELS, 3, 15, description="Kneel, hold rope at head, crunch elbows toward knees, control return."),
+    ET("Ab Wheel Rollout",  _CO, "strength", _BW, [_HOME, _SPLIT], [_INT, _ADV], 3, 10, description="Roll out slowly, brace core hard, pull back with lats and abs."),
+    ET("Mountain Climber",  _CO, "strength", _BW, [_HOME, _FULL, _CARDIO], _ALL_LEVELS, 3, 20, description="Plank position, alternate driving knees to chest, keep hips down."),
     # CARDIO
-    ET("Treadmill Run",    _CA, "cardio", _CM, [_CARDIO], _ALL_LEVELS, default_duration_min=30.0, description="Moderate pace (zone 2). Conversational breathing throughout."),
-    ET("Stationary Bike",  _CA, "cardio", _CM, [_CARDIO], _ALL_LEVELS, default_duration_min=25.0, description="Steady effort, moderate resistance. Focus on consistent cadence."),
-    ET("Jump Rope",        _CA, "cardio", _BW, [_CARDIO, _HOME], _ALL_LEVELS, default_duration_min=15.0, description="Basic bounce or alternating feet. Wrists do the work, not arms."),
-    ET("Burpee",           _FB, "cardio", _BW, [_CARDIO, _HOME, _FULL], [_INT, _ADV], default_duration_min=10.0, description="Squat, kick back to plank, push-up, jump feet in, jump up. Full body explosive."),
-    ET("Rowing Machine",   _FB, "cardio", _CM, [_CARDIO], _ALL_LEVELS, default_duration_min=20.0, description="Legs, core, arms in that order on the drive. Ratio: 1 part drive, 2 parts recovery."),
-    ET("High Knees",       _CA, "cardio", _BW, [_CARDIO, _HOME], _ALL_LEVELS, default_duration_min=10.0, description="Drive knees to hip height alternately. Stay on balls of feet."),
+    ET("Treadmill Run",   _CA, "cardio", _CM, [_CARDIO], _ALL_LEVELS, default_duration_min=30.0, description="Moderate pace (zone 2). Conversational breathing throughout."),
+    ET("Stationary Bike", _CA, "cardio", _CM, [_CARDIO], _ALL_LEVELS, default_duration_min=25.0, description="Steady effort, moderate resistance. Focus on consistent cadence."),
+    ET("Jump Rope",       _CA, "cardio", _BW, [_CARDIO, _HOME], _ALL_LEVELS, default_duration_min=15.0, description="Basic bounce or alternating feet. Wrists do the work, not arms."),
+    ET("Burpee",          _FB, "cardio", _BW, [_CARDIO, _HOME, _FULL], [_INT, _ADV], default_duration_min=10.0, description="Squat, kick to plank, push-up, jump feet in, jump up. Full body explosive."),
+    ET("Rowing Machine",  _FB, "cardio", _CM, [_CARDIO], _ALL_LEVELS, default_duration_min=20.0, description="Legs, core, arms in order on the drive. Ratio: 1 part drive, 2 parts recovery."),
+    ET("High Knees",      _CA, "cardio", _BW, [_CARDIO, _HOME], _ALL_LEVELS, default_duration_min=10.0, description="Drive knees to hip height alternately. Stay on balls of feet."),
 ]
+# pylint: enable=line-too-long
 
 
 class WorkoutTemplate:
-    def __init__(self, workout_type: str, user_id: str, exercises: list[ExerciseTemplate]) -> None:
+    """A generated workout plan tailored to a specific UserProfile."""
+
+    def __init__(
+        self, workout_type: str, user_id: str, exercises: list[ExerciseTemplate],
+    ) -> None:
+        """Initialise workout template with type, owner, and exercise list."""
         self._workout_type = workout_type
         self._user_id      = user_id
         self._exercises    = exercises
 
     @property
     def workout_type(self) -> str:
+        """Return the workout type string."""
         return self._workout_type
 
     @property
     def user_id(self) -> str:
+        """Return the owning user's id."""
         return self._user_id
 
     @property
     def exercises(self) -> list[ExerciseTemplate]:
+        """Return a copy of the exercise list."""
         return list(self._exercises)
 
     def exercise_count(self) -> int:
+        """Return the number of exercises in the plan."""
         return len(self._exercises)
 
     def to_dict(self) -> dict:
-        return {"workout_type": self._workout_type, "user_id": self._user_id,
-                "exercises": [ex.to_dict() for ex in self._exercises]}
+        """Serialise workout template to dict."""
+        return {
+            "workout_type": self._workout_type,
+            "user_id": self._user_id,
+            "exercises": [ex.to_dict() for ex in self._exercises],
+        }
 
     def __repr__(self) -> str:
+        """Return developer-friendly string."""
         return f"WorkoutTemplate(type={self._workout_type!r}, exercises={len(self._exercises)})"
 
 
-class WorkoutGenerator:
+class WorkoutGenerator:  # pylint: disable=too-few-public-methods
+    """Generates a WorkoutTemplate tailored to a UserProfile."""
+
     _EXERCISE_COUNTS: dict[str, int] = {
         WorkoutType.FULL_BODY.value: 8,
         WorkoutType.SPLIT.value:    6,
@@ -605,14 +757,23 @@ class WorkoutGenerator:
     }
 
     def __init__(self, database: list[ExerciseTemplate] | None = None) -> None:
+        """Initialise generator with optional custom exercise database."""
         self._db = database if database is not None else EXERCISE_DATABASE
 
-    def generate(self, profile: UserProfile, workout_type: str,
-                 focus_muscles: list[str] | None = None) -> WorkoutTemplate:
+    def generate(
+        self,
+        profile: UserProfile,
+        workout_type: str,
+        focus_muscles: list[str] | None = None,
+    ) -> WorkoutTemplate:
+        """Generate a WorkoutTemplate tailored to the profile's stats and goal."""
         try:
             WorkoutType(workout_type)
-        except ValueError:
-            raise ValueError(f"Invalid workout_type '{workout_type}'. Choose: " + ", ".join(w.value for w in WorkoutType))
+        except ValueError as exc:
+            raise ValueError(
+                f"Invalid workout_type '{workout_type}'. Choose: "
+                + ", ".join(w.value for w in WorkoutType)
+            ) from exc
 
         user_equipment = profile.equipment + [Equipment.BODYWEIGHT.value]
         bmi_cat        = profile.bmi_category()
@@ -624,9 +785,9 @@ class WorkoutGenerator:
             candidates = focused if focused else candidates
 
         if bmi_cat in ("overweight", "obese") and workout_type != WorkoutType.CARDIO.value:
-            cardio_ex  = [ex for ex in candidates if ex.exercise_type == "cardio"]
+            cardio_ex   = [ex for ex in candidates if ex.exercise_type == "cardio"]
             strength_ex = [ex for ex in candidates if ex.exercise_type == "strength"]
-            candidates = cardio_ex + strength_ex
+            candidates  = cardio_ex + strength_ex
         elif bmi_cat == "underweight":
             strength_ex = [ex for ex in candidates if ex.exercise_type == "strength"]
             cardio_ex   = [ex for ex in candidates if ex.exercise_type == "cardio"]
@@ -640,8 +801,13 @@ class WorkoutGenerator:
         adjusted = self._apply_goal(selected, profile.goal, bmi_cat)
         return WorkoutTemplate(workout_type=workout_type, user_id=profile.id, exercises=adjusted)
 
-    def _select(self, candidates: list[ExerciseTemplate], workout_type: str,
-                target: int) -> list[ExerciseTemplate]:
+    def _select(
+        self,
+        candidates: list[ExerciseTemplate],
+        workout_type: str,
+        target: int,
+    ) -> list[ExerciseTemplate]:
+        """Select a balanced set of exercises from candidates."""
         if workout_type == WorkoutType.FULL_BODY.value:
             return self._balanced_select(candidates, target)
         if workout_type == WorkoutType.CARDIO.value:
@@ -649,7 +815,10 @@ class WorkoutGenerator:
             return cardio[:target] if cardio else candidates[:target]
         return candidates[:target]
 
-    def _balanced_select(self, candidates: list[ExerciseTemplate], target: int) -> list[ExerciseTemplate]:
+    def _balanced_select(
+        self, candidates: list[ExerciseTemplate], target: int,
+    ) -> list[ExerciseTemplate]:
+        """Select exercises covering diverse muscle groups."""
         by_muscle: dict[str, list[ExerciseTemplate]] = {}
         for ex in candidates:
             by_muscle.setdefault(ex.muscle_group, []).append(ex)
@@ -664,8 +833,13 @@ class WorkoutGenerator:
             i += 1
         return selected[:target]
 
-    def _apply_goal(self, exercises: list[ExerciseTemplate], goal: str,
-                    bmi_cat: Optional[str] = None) -> list[ExerciseTemplate]:
+    def _apply_goal(
+        self,
+        exercises: list[ExerciseTemplate],
+        goal: str,
+        bmi_cat: Optional[str] = None,
+    ) -> list[ExerciseTemplate]:
+        """Return copies of templates with sets/reps adjusted for goal and BMI."""
         sets_mod, reps_mod = self._GOAL_MODIFIERS.get(goal, (1.0, 1.0))
         if bmi_cat == "underweight":
             sets_mod *= 1.1
@@ -674,18 +848,26 @@ class WorkoutGenerator:
             reps_mod *= 1.15
         adjusted = []
         for ex in exercises:
-            t = copy.copy(ex)
+            template = copy.copy(ex)
             if ex.exercise_type == "strength":
-                t.default_sets = max(1, round(ex.default_sets * sets_mod))
-                t.default_reps = max(1, round(ex.default_reps * reps_mod))
-            adjusted.append(t)
+                template.default_sets = max(1, round(ex.default_sets * sets_mod))
+                template.default_reps = max(1, round(ex.default_reps * reps_mod))
+            adjusted.append(template)
         return adjusted
 
 
-class WorkoutSession:
-    def __init__(self, session_date: Optional[str] = None, label: str = "",
-                 workout_type: str = WorkoutType.FULL_BODY.value,
-                 user_id: Optional[str] = None, _id: Optional[str] = None) -> None:
+class WorkoutSession:  # pylint: disable=too-many-instance-attributes
+    """A single logged training session containing exercises."""
+
+    def __init__(
+        self,
+        session_date: Optional[str] = None,
+        label: str = "",
+        workout_type: str = WorkoutType.FULL_BODY.value,
+        user_id: Optional[str] = None,
+        _id: Optional[str] = None,
+    ) -> None:
+        """Initialise a workout session."""
         self._id          = _id or str(uuid.uuid4())
         self.session_date = session_date or date.today().isoformat()
         self.label        = label
@@ -695,65 +877,88 @@ class WorkoutSession:
 
     @property
     def id(self) -> str:
+        """Return unique session id."""
         return self._id
 
     @property
     def session_date(self) -> str:
+        """Return session date as YYYY-MM-DD string."""
         return self._session_date
 
     @session_date.setter
     def session_date(self, value: str) -> None:
+        """Set and validate session date in YYYY-MM-DD format."""
         try:
             datetime.strptime(value, "%Y-%m-%d")
-        except ValueError:
-            raise ValueError("session_date must be in YYYY-MM-DD format.")
+        except ValueError as exc:
+            raise ValueError("session_date must be in YYYY-MM-DD format.") from exc
         self._session_date = value
 
     @property
     def label(self) -> str:
+        """Return session label."""
         return self._label
 
     @label.setter
     def label(self, value: str) -> None:
+        """Set session label, stripping whitespace."""
         self._label = value.strip()
 
     @property
     def workout_type(self) -> str:
+        """Return workout type string."""
         return self._workout_type
 
     @workout_type.setter
     def workout_type(self, value: str) -> None:
+        """Set workout type, defaulting to full_body for invalid values."""
         try:
             self._workout_type = WorkoutType(value).value
         except ValueError:
             self._workout_type = WorkoutType.FULL_BODY.value
 
     def add_exercise(self, exercise: Exercise) -> Exercise:
+        """Add an exercise to the session and return it."""
         self._exercises[exercise.id] = exercise
         return exercise
 
     def remove_exercise(self, exercise_id: str) -> bool:
+        """Remove an exercise by id; return True if found and removed."""
         if exercise_id in self._exercises:
             del self._exercises[exercise_id]
             return True
         return False
 
     def get_exercise(self, exercise_id: str) -> Optional[Exercise]:
+        """Return the exercise with the given id, or None."""
         return self._exercises.get(exercise_id)
 
     def get_all_exercises(self) -> list[Exercise]:
+        """Return all exercises in the session."""
         return list(self._exercises.values())
 
     def exercise_count(self) -> int:
+        """Return the number of exercises in the session."""
         return len(self._exercises)
 
     def total_volume(self) -> float:
-        return sum(ex.total_volume() for ex in self._exercises.values() if isinstance(ex, StrengthExercise))
+        """Return total volume (sets × reps × weight) across all strength exercises."""
+        return sum(
+            ex.total_volume()
+            for ex in self._exercises.values()
+            if isinstance(ex, StrengthExercise)
+        )
 
     def total_cardio_minutes(self) -> float:
-        return sum(ex.duration_min for ex in self._exercises.values() if isinstance(ex, CardioExercise))
+        """Return total cardio duration in minutes across all cardio exercises."""
+        return sum(
+            ex.duration_min
+            for ex in self._exercises.values()
+            if isinstance(ex, CardioExercise)
+        )
 
     def to_dict(self) -> dict:
+        """Serialise workout session to dict."""
         return {
             "id": self._id, "session_date": self._session_date, "label": self._label,
             "workout_type": self._workout_type, "user_id": self.user_id,
@@ -762,6 +967,7 @@ class WorkoutSession:
 
     @classmethod
     def from_dict(cls, data: dict) -> "WorkoutSession":
+        """Reconstruct a WorkoutSession from a dict."""
         session = cls(
             session_date=data.get("session_date"), label=data.get("label", ""),
             workout_type=data.get("workout_type", WorkoutType.FULL_BODY.value),
@@ -772,53 +978,72 @@ class WorkoutSession:
         return session
 
     def __contains__(self, exercise_id: str) -> bool:
+        """Return True if an exercise with the given id is in this session."""
         return exercise_id in self._exercises
 
     def __repr__(self) -> str:
-        return (f"WorkoutSession(id={self._id!r}, date={self._session_date!r}, "
-                f"type={self._workout_type!r}, exercises={len(self._exercises)})")
+        """Return developer-friendly string."""
+        return (
+            f"WorkoutSession(id={self._id!r}, date={self._session_date!r}, "
+            f"type={self._workout_type!r}, exercises={len(self._exercises)})"
+        )
 
 
 class WorkoutLog:
+    """Persistent store for all workout sessions and user profiles."""
+
     def __init__(self, data_file: str = "workouts.json") -> None:
+        """Initialise the log, loading existing data from the JSON file."""
         self._data_file = data_file
         self._sessions: dict[str, WorkoutSession] = {}
         self._profiles: dict[str, UserProfile]    = {}
         self._load()
 
     def _load(self) -> None:
+        """Load sessions and profiles from the JSON file if it exists."""
         if not os.path.exists(self._data_file):
             return
         try:
-            with open(self._data_file, "r", encoding="utf-8") as f:
-                raw: dict = json.load(f)
+            with open(self._data_file, "r", encoding="utf-8") as fh:
+                raw: dict = json.load(fh)
             for item in raw.get("sessions", []):
-                s = WorkoutSession.from_dict(item)
-                self._sessions[s.id] = s
+                session = WorkoutSession.from_dict(item)
+                self._sessions[session.id] = session
             for item in raw.get("profiles", []):
-                p = UserProfile.from_dict(item)
-                self._profiles[p.id] = p
+                profile = UserProfile.from_dict(item)
+                self._profiles[profile.id] = profile
         except (json.JSONDecodeError, KeyError):
             self._sessions = {}
             self._profiles = {}
 
     def _save(self) -> None:
-        with open(self._data_file, "w", encoding="utf-8") as f:
-            json.dump({"sessions": [s.to_dict() for s in self._sessions.values()],
-                       "profiles": [p.to_dict() for p in self._profiles.values()]}, f, indent=2)
+        """Persist sessions and profiles to the JSON file."""
+        with open(self._data_file, "w", encoding="utf-8") as fh:
+            json.dump(
+                {
+                    "sessions": [s.to_dict() for s in self._sessions.values()],
+                    "profiles": [p.to_dict() for p in self._profiles.values()],
+                },
+                fh,
+                indent=2,
+            )
 
     def add_profile(self, profile: UserProfile) -> UserProfile:
+        """Add a profile to the log, persist, and return it."""
         self._profiles[profile.id] = profile
         self._save()
         return profile
 
     def get_profile(self, profile_id: str) -> Optional[UserProfile]:
+        """Return the profile with the given id, or None."""
         return self._profiles.get(profile_id)
 
     def get_all_profiles(self) -> list[UserProfile]:
+        """Return all stored profiles."""
         return list(self._profiles.values())
 
     def delete_profile(self, profile_id: str) -> bool:
+        """Delete a profile by id; return True if found and deleted."""
         if profile_id in self._profiles:
             del self._profiles[profile_id]
             self._save()
@@ -826,6 +1051,7 @@ class WorkoutLog:
         return False
 
     def update_profile(self, profile_id: str, **kwargs) -> Optional[UserProfile]:
+        """Update profile fields by keyword; return updated profile or None."""
         profile = self._profiles.get(profile_id)
         if profile is None:
             return None
@@ -836,20 +1062,25 @@ class WorkoutLog:
         return profile
 
     def add_session(self, session: WorkoutSession) -> WorkoutSession:
+        """Add a session to the log, persist, and return it."""
         self._sessions[session.id] = session
         self._save()
         return session
 
     def get_session(self, session_id: str) -> Optional[WorkoutSession]:
+        """Return the session with the given id, or None."""
         return self._sessions.get(session_id)
 
     def get_all_sessions(self) -> list[WorkoutSession]:
+        """Return all sessions sorted newest first."""
         return sorted(self._sessions.values(), key=lambda s: s.session_date, reverse=True)
 
     def get_sessions_by_user(self, user_id: str) -> list[WorkoutSession]:
+        """Return all sessions belonging to the given user."""
         return [s for s in self._sessions.values() if s.user_id == user_id]
 
     def delete_session(self, session_id: str) -> bool:
+        """Delete a session by id; return True if found and deleted."""
         if session_id in self._sessions:
             del self._sessions[session_id]
             self._save()
@@ -857,6 +1088,7 @@ class WorkoutLog:
         return False
 
     def update_session(self, session_id: str, **kwargs) -> Optional[WorkoutSession]:
+        """Update session fields by keyword; return updated session or None."""
         session = self._sessions.get(session_id)
         if session is None:
             return None
@@ -866,7 +1098,10 @@ class WorkoutLog:
         self._save()
         return session
 
-    def add_exercise_to_session(self, session_id: str, exercise: Exercise) -> Optional[Exercise]:
+    def add_exercise_to_session(
+        self, session_id: str, exercise: Exercise,
+    ) -> Optional[Exercise]:
+        """Add an exercise to a session; return the exercise or None if session missing."""
         session = self._sessions.get(session_id)
         if session is None:
             return None
@@ -875,6 +1110,7 @@ class WorkoutLog:
         return exercise
 
     def remove_exercise_from_session(self, session_id: str, exercise_id: str) -> bool:
+        """Remove an exercise from a session; return True if removed."""
         session = self._sessions.get(session_id)
         if session is None:
             return False
@@ -884,6 +1120,7 @@ class WorkoutLog:
         return removed
 
     def search(self, query: str) -> list[WorkoutSession]:
+        """Return sessions matching query by label, exercise name, or muscle group."""
         q = query.lower().strip()
         results = []
         for session in self._sessions.values():
@@ -897,9 +1134,11 @@ class WorkoutLog:
         return sorted(results, key=lambda s: s.session_date, reverse=True)
 
     def total_sessions(self) -> int:
+        """Return the total number of logged sessions."""
         return len(self._sessions)
 
     def personal_best(self, exercise_name: str) -> Optional[float]:
+        """Return the highest weight lifted for the named exercise, or None."""
         best: Optional[float] = None
         name_lower = exercise_name.lower()
         for session in self._sessions.values():
@@ -910,7 +1149,9 @@ class WorkoutLog:
         return best
 
     def __contains__(self, session_id: str) -> bool:
+        """Return True if a session with the given id exists."""
         return session_id in self._sessions
 
     def __len__(self) -> int:
+        """Return the number of sessions in the log."""
         return len(self._sessions)
