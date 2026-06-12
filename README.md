@@ -12,6 +12,8 @@ A full-stack fitness tracking application built with Python OOP, FastAPI, and a 
 - Stats overview showing total sessions, volume (kg), and cardio minutes
 - Data persists across server restarts via a JSON file
 
+  Live demo: https://fitnesstracker-production-dc35.up.railway.app
+
 ## Project Structure
 
 ```
